@@ -1,6 +1,7 @@
-import { Box, Alert, Button, Paper, Typography } from '@mui/material';
+import { Box, Alert, Button, Paper, Typography, Divider } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useState } from 'react';
+import NlognLogo from './NlognLogo';
 
 const GameBoard = styled(Box)({
     width: '600px',
@@ -125,7 +126,7 @@ const Game = () => {
             [1, 6], // правая верхняя вершина <-> правая внутренняя
             [1, 8], // правая верхняя вершина <-> левая внутренняя
             [4, 6], // левая верхняя вершина <-> правая внутренняя
-            [4, 9], // левая верхняя вершина <-> нижняя внутренняя
+            [4, 9], // левая верхняя ��ершина <-> нижняя внутренняя
             [0, 7], // верхняя вершина <-> центр
             [0, 5], // верхняя вершина <-> верхняя внутренняя
             [2, 9], // правая нижняя вершина <-> нижняя внутренняя
@@ -290,13 +291,15 @@ const Game = () => {
                     </Typography>
                     <Typography component="div">
                         <ul>
-                            <li>За один ход нужно выбрать две пустые точки</li>
+                            <li>За один ход нужно выбрать две пустые то��ки</li>
                             <li>Точки должны быть соединены линией на поле</li>
                             <li>Между выбранными точками должна быть ровно одна точка (занятая или пустая)</li>
                             <li>После хода фишка появляется во второй выбранной точке</li>
                             <li>Игра завершается, когда все 9 фишек размещены на поле</li>
                         </ul>
                     </Typography>
+                    <Divider sx={{ my: 3 }} />
+                    <NlognLogo />
                 </RulesPanel>
             </GameContainer>
         </Box>
