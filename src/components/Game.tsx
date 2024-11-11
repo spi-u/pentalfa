@@ -1,5 +1,4 @@
-import { Box, Alert, Button } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
+import { Box, Alert, Button, Paper, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useState } from 'react';
 
@@ -10,10 +9,30 @@ const GameBoard = styled(Box)({
     position: 'relative',
 });
 
+const GameContainer = styled(Box)({
+    display: 'flex',
+    gap: '40px',
+    maxWidth: '1000px',
+    margin: '0 auto',
+    padding: '20px',
+});
+
+const RulesPanel = styled(Paper)(({ theme }) => ({
+    padding: theme.spacing(3),
+    width: '300px',
+    height: 'fit-content',
+}));
+
 interface Point {
     x: number;
     y: number;
     id: number;
+}
+
+// Добавим интерфейс для состояния хода
+interface MoveState {
+    isFirstPhase: boolean;
+    selectedPointId: number | null;
 }
 
 const Game = () => {
@@ -21,8 +40,11 @@ const Game = () => {
     const centerY = 300;
     const outerRadius = 250;
     
-    // Состояние для хранения размещенных фишек
     const [placedPieces, setPlacedPieces] = useState<number[]>([]);
+    const [moveState, setMoveState] = useState<MoveState>({
+        isFirstPhase: true,
+        selectedPointId: null
+    });
 
     // Вычисляем координаты вершин пятиконечной звезды
     const calculateStarPoints = (): Point[] => {
@@ -96,87 +118,187 @@ const Game = () => {
         return lines;
     };
 
+    // Обновленная функция проверки валидности хода с правильными линиями
+    const isValidMove = (fromId: number, toId: number): boolean => {
+        // Массив допустимых ходов через одну точку
+        const validMoves = [
+            [1, 6], // правая верхняя вершина <-> правая внутренняя
+            [1, 8], // правая верхняя вершина <-> левая внутренняя
+            [4, 6], // левая верхняя вершина <-> правая внутренняя
+            [4, 9], // левая верхняя вершина <-> нижняя внутренняя
+            [0, 7], // верхняя вершина <-> центр
+            [0, 5], // верхняя вершина <-> верхняя внутренняя
+            [2, 9], // правая нижняя вершина <-> нижняя внутренняя
+            [2, 7], // правая нижняя вершина <-> центр
+            [3, 8], // левая нижняя вершина <-> левая внутренняя
+            [3, 5], // левая нижняя вершина <-> верхняя внутренняя
+        ];
+
+        // Проверяем, есть ли такой ход в списке допустимых (в обоих направлениях)
+        return validMoves.some(([start, end]) => 
+            (fromId === start && toId === end) || (fromId === end && toId === start)
+        );
+    };
+
     const handlePointClick = (pointId: number) => {
-        if (placedPieces.includes(pointId)) return; // Точка уже занята
-        if (placedPieces.length >= 9) return; // Все 9 фишек уже размещены
+        // Если все фишки уже размещены, выходим
+        if (placedPieces.length >= 9) return;
         
-        setPlacedPieces([...placedPieces, pointId]);
+        // Если точка уже занята, выходим
+        if (placedPieces.includes(pointId)) return;
+
+        if (moveState.isFirstPhase) {
+            // Первая фаза: выбор первой точки
+            setMoveState({
+                isFirstPhase: false,
+                selectedPointId: pointId
+            });
+        } else {
+            // Вторая фаза: выбор второй точки
+            const fromId = moveState.selectedPointId;
+            if (fromId === null) return;
+
+            // Проверяем валидность хода
+            if (isValidMove(fromId, pointId)) {
+                // Размещаем фишку на второй точке
+                setPlacedPieces([...placedPieces, pointId]);
+                setMoveState({
+                    isFirstPhase: true,
+                    selectedPointId: null
+                });
+            } else {
+                // Если ход невалиден, сбрасываем выбор
+                setMoveState({
+                    isFirstPhase: true,
+                    selectedPointId: null
+                });
+            }
+        }
     };
 
     const handleReset = () => {
         setPlacedPieces([]);
+        setMoveState({
+            isFirstPhase: true,
+            selectedPointId: null
+        });
     };
 
     const starLines = createStarLines();
-
     const isGameComplete = placedPieces.length === 9;
 
     return (
-        <Box sx={{ maxWidth: 600, margin: 'auto', mt: 4 }}>
-            {isGameComplete && (
-                <Alert 
-                    severity="success" 
-                    sx={{ mb: 2 }}
-                >
-                    Поздравляем! Вы победили!
-                </Alert>
-            )}
-            <GameBoard>
-                <svg width="600" height="600">
-                    {/* Рисуем линии звезды */}
-                    {starLines.map((line, index) => (
-                        <line
-                            key={index}
-                            x1={line.x1}
-                            y1={line.y1}
-                            x2={line.x2}
-                            y2={line.y2}
-                            stroke="black"
-                            strokeWidth="2"
-                        />
-                    ))}
-                    
-                    {/* Рисуем все точки и фишки */}
-                    {allPoints.map((point) => (
-                        <g key={point.id} onClick={() => handlePointClick(point.id)}>
-                            {/* Точка */}
-                            <circle
-                                cx={point.x}
-                                cy={point.y}
-                                r="5"
-                                fill="black"
-                            />
-                            {/* Фишка, если она размещена в этой точке */}
-                            {placedPieces.includes(point.id) && (
-                                <circle
-                                    cx={point.x}
-                                    cy={point.y}
-                                    r="15"
-                                    fill="#2196f3"
-                                    stroke="white"
+        <Box sx={{ mt: 4 }}>
+            <Typography variant="h3" align="center" gutterBottom>
+                Пентальфа
+            </Typography>
+            
+            <GameContainer>
+                <Box>
+                    {isGameComplete && (
+                        <Alert severity="success" sx={{ mb: 2 }}>
+                            Поздравляем! Вы победили!
+                        </Alert>
+                    )}
+                    <GameBoard>
+                        <svg width="600" height="600">
+                            {starLines.map((line, index) => (
+                                <line
+                                    key={index}
+                                    x1={line.x1}
+                                    y1={line.y1}
+                                    x2={line.x2}
+                                    y2={line.y2}
+                                    stroke="black"
                                     strokeWidth="2"
                                 />
+                            ))}
+                            
+                            {allPoints.map((point) => (
+                                <g key={point.id} onClick={() => handlePointClick(point.id)}>
+                                    <circle
+                                        cx={point.x}
+                                        cy={point.y}
+                                        r="5"
+                                        fill="black"
+                                    />
+                                    {placedPieces.includes(point.id) && (
+                                        <circle
+                                            cx={point.x}
+                                            cy={point.y}
+                                            r="15"
+                                            fill="#2196f3"
+                                            stroke="white"
+                                            strokeWidth="2"
+                                        />
+                                    )}
+                                    {moveState.selectedPointId === point.id && (
+                                        <circle
+                                            cx={point.x}
+                                            cy={point.y}
+                                            r="15"
+                                            fill="rgba(33, 150, 243, 0.5)"
+                                            stroke="#2196f3"
+                                            strokeWidth="2"
+                                            strokeDasharray="5,5"
+                                        >
+                                            <animate
+                                                attributeName="stroke-dashoffset"
+                                                from="0"
+                                                to="10"
+                                                dur="1s"
+                                                repeatCount="indefinite"
+                                            />
+                                        </circle>
+                                    )}
+                                </g>
+                            ))}
+                        </svg>
+                        
+                        <Box sx={{ textAlign: 'center', mt: 2 }}>
+                            {!isGameComplete ? (
+                                moveState.isFirstPhase ? 
+                                    `Выберите первую точку хода (осталось фишек: ${9 - placedPieces.length})` :
+                                    'Выберите вторую точку хода (должна быть через одну точку по линии)'
+                            ) : (
+                                'Игра завершена!'
                             )}
-                        </g>
-                    ))}
-                </svg>
-                
-                <Box sx={{ textAlign: 'center', mt: 2 }}>
-                    {!isGameComplete ? (
-                        `Осталось фишек: ${9 - placedPieces.length}`
-                    ) : (
-                        'Игра завершена!'
-                    )}
-                    <Button
-                        variant="contained"
-                        color="error"
-                        onClick={handleReset}
-                        sx={{ mt: 2, display: 'block', margin: '20px auto' }}
-                    >
-                        Сбросить игру
-                    </Button>
+                            <Button
+                                variant="contained"
+                                color="error"
+                                onClick={handleReset}
+                                sx={{ mt: 2, display: 'block', margin: '20px auto' }}
+                            >
+                                Сбросить игру
+                            </Button>
+                        </Box>
+                    </GameBoard>
                 </Box>
-            </GameBoard>
+
+                <RulesPanel elevation={3}>
+                    <Typography variant="h5" gutterBottom>
+                        Правила игры
+                    </Typography>
+                    <Typography variant="body1" paragraph>
+                        Пентальфа - это логическая игра-головоломка на пятиконечной звезде.
+                    </Typography>
+                    <Typography variant="body1" paragraph>
+                        Цель игры: разместить все 9 фишек на поле по определенным правилам.
+                    </Typography>
+                    <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                        Как играть:
+                    </Typography>
+                    <Typography component="div">
+                        <ul>
+                            <li>За один ход нужно выбрать две пустые точки</li>
+                            <li>Точки должны быть соединены линией на поле</li>
+                            <li>Между выбранными точками должна быть ровно одна точка (занятая или пустая)</li>
+                            <li>После хода фишка появляется во второй выбранной точке</li>
+                            <li>Игра завершается, когда все 9 фишек размещены на поле</li>
+                        </ul>
+                    </Typography>
+                </RulesPanel>
+            </GameContainer>
         </Box>
     );
 };
